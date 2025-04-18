@@ -4,6 +4,32 @@ import connectDB from "@/lib/mongodb";
 import User from "@/models/User";
 import Chat from "@/models/Chat";
 
+function extractTriggerWords(chat) {
+  const triggerWords = new Map();
+
+  chat.messages
+    .filter((msg) => msg.role === "assistant" && msg.currentStep === 2)
+    .forEach((msg) => {
+      const lines = msg.content.split("\n");
+      lines.forEach((line) => {
+        if (line.trim().startsWith("•")) {
+          const trigger = line.replace("•", "").trim();
+          const cleanTrigger = trigger.split(":")[0].trim();
+          if (cleanTrigger.length > 3) {
+            triggerWords.set(
+              cleanTrigger,
+              (triggerWords.get(cleanTrigger) || 0) + 1
+            );
+          }
+        }
+      });
+    });
+
+  return Array.from(triggerWords.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, count]) => ({ name, count }));
+}
+
 export async function GET() {
   try {
     const session = await getServerSession();
@@ -23,6 +49,8 @@ export async function GET() {
     // Get user's chats
     const chats = await Chat.find({ userId: user._id });
 
+    chats.forEach((chat) => console.log(chat.messages));
+
     // Calculate session stats
     const sessionStats = {
       total: chats.length,
@@ -40,46 +68,20 @@ export async function GET() {
       }))
       .reverse();
 
-    // Analyze chat messages for triggers
-    const triggerWords = new Map();
-    chats.forEach((chat) => {
-      chat.messages
-        .filter((msg) => msg.role === "assistant" && chat.currentStep === 2)
-        .forEach((msg) => {
-          // Extract triggers from bullet points
-          const lines = msg.content.split("\n");
-          lines.forEach((line) => {
-            if (line.trim().startsWith("•")) {
-              // Remove bullet point and get the trigger text
-              const trigger = line.replace("•", "").trim();
-              // Remove any context after colon if present
-              const cleanTrigger = trigger.split(":")[0].trim();
-              if (cleanTrigger.length > 3) {
-                // Avoid short words
-                triggerWords.set(
-                  cleanTrigger,
-                  (triggerWords.get(cleanTrigger) || 0) + 1
-                );
-              }
-            }
-          });
-        });
-    });
-
     // Get top triggers
-    const topTriggers = Array.from(triggerWords.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([name, count]) => ({ name, count }));
+    const topTriggers = chats
+      .flatMap((chat) => extractTriggerWords(chat))
+      .slice(0, 5);
 
     // Analyze coping strategies effectiveness
     const strategies = new Map();
     chats.forEach((chat) => {
       const strategyMessages = chat.messages.filter(
-        (msg) => msg.role === "assistant" && chat.currentStep === 3 // Coping strategies step
+        (msg) => msg.role === "assistant" && msg.currentStep === 3 // Coping strategies step
       );
 
       strategyMessages.forEach((msg) => {
+        console.log(msg);
         // Extract strategy suggestions and their context
         const content = msg.content.toLowerCase();
         const commonStrategies = [
@@ -90,10 +92,14 @@ export async function GET() {
           "talking",
           "music",
           "nature",
+          "preparation",
           "reading",
         ];
 
         commonStrategies.forEach((strategy) => {
+          console.log(strategy);
+          console.log(content);
+          console.log(content.includes(strategy));
           if (content.includes(strategy)) {
             // Calculate effectiveness based on subsequent mood entries
             const timestamp = new Date(msg.timestamp);

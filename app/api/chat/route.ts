@@ -53,7 +53,8 @@ export async function POST(request: Request) {
     }
 
     const { messages, currentStep, chatId } = await request.json();
-    // console.log();
+
+    console.log(messages);
 
     // Get or create chat session
     let chat;
@@ -101,18 +102,18 @@ export async function POST(request: Request) {
       response?.toLowerCase().includes("step complete") ||
       response?.toLowerCase().includes("moving to next step");
 
-    console.log(stepComplete);
-
     // Update chat with new messages
     chat.messages.push(
       {
         role: "user",
         content: messages[messages.length - 1].content,
+        currentStep: messages[messages.length - 1].currentStep,
         timestamp: new Date(),
       },
       {
         role: "assistant",
         content: response,
+        currentStep: messages[messages.length - 1].currentStep,
         timestamp: new Date(),
       }
     );

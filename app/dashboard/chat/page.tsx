@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 interface Message {
   role: "user" | "assistant";
   content: string;
+  currentStep?: number;
   step?: number;
   timestamp: Date;
 }
@@ -15,6 +16,7 @@ interface Step {
   title: string;
   description: string;
   completed: boolean;
+  examplePrompt: string;
 }
 
 const INITIAL_STEPS: Step[] = [
@@ -23,24 +25,32 @@ const INITIAL_STEPS: Step[] = [
     title: "Identify Your Feelings",
     description: "Let's start by understanding how you're feeling right now.",
     completed: false,
+    examplePrompt:
+      "I'm feeling overwhelmed and anxious about my upcoming presentation at work.",
   },
   {
     number: 2,
     title: "Explore Triggers",
     description: "What might have led to these feelings?",
     completed: false,
+    examplePrompt:
+      "I think it started when my manager mentioned the presentation deadline was moved up.",
   },
   {
     number: 3,
     title: "Consider Coping Strategies",
     description: "Let's explore some helpful ways to manage these feelings.",
     completed: false,
+    examplePrompt:
+      "I usually take deep breaths, but I'm not sure if that's enough for this situation.",
   },
   {
     number: 4,
     title: "Create an Action Plan",
     description: "What steps can you take to feel better?",
     completed: false,
+    examplePrompt:
+      "I could break down the presentation into smaller tasks and practice each section.",
   },
 ];
 
@@ -48,10 +58,13 @@ export default function Chat() {
   const { data: session } = useSession();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
+  const [chatId, setChatId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [steps, setSteps] = useState<Step[]>(INITIAL_STEPS);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [exampleText, setExampleText] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -61,6 +74,31 @@ export default function Chat() {
     scrollToBottom();
   }, [messages]);
 
+  useEffect(() => {
+    if (messages.length === 0) {
+      const currentExample = steps[currentStep - 1]?.examplePrompt;
+      if (!currentExample) return;
+
+      setIsTyping(true);
+      setExampleText(currentExample[0]);
+
+      let i = 1;
+      const typingInterval = setInterval(() => {
+        if (i < currentExample.length) {
+          setExampleText((prev) => prev + currentExample[i]);
+          i++;
+        } else {
+          setIsTyping(false);
+          clearInterval(typingInterval);
+        }
+      }, 30);
+      return () => clearInterval(typingInterval);
+    } else {
+      setExampleText("");
+      setIsTyping(false);
+    }
+  }, [currentStep, messages.length, steps]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
@@ -68,6 +106,7 @@ export default function Chat() {
     const userMessage: Message = {
       role: "user",
       content: input,
+      currentStep: currentStep,
       step: currentStep,
       timestamp: new Date(),
     };
@@ -85,18 +124,23 @@ export default function Chat() {
         body: JSON.stringify({
           messages: [...messages, userMessage],
           currentStep,
+          chatId,
         }),
       });
 
       const data = await response.json();
 
+      console.log(data);
+
       const assistantMessage: Message = {
         role: "assistant",
         content: data.content,
+        currentStep: currentStep,
         step: currentStep,
         timestamp: new Date(),
       };
 
+      setChatId(data.chatId || null);
       setMessages((prev) => [...prev, assistantMessage]);
 
       // Update step completion if the AI indicates the step is complete
@@ -115,6 +159,7 @@ export default function Chat() {
         {
           role: "assistant",
           content: "I apologize, but I encountered an error. Please try again.",
+          currentStep: currentStep,
           step: currentStep,
           timestamp: new Date(),
         },
@@ -162,6 +207,22 @@ export default function Chat() {
       {/* Chat Messages */}
       <div className="flex-1 overflow-y-auto p-4">
         <div className="max-w-4xl mx-auto space-y-4">
+          {messages.length === 0 && (
+            <div className="text-center py-8">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                {steps[currentStep - 1].title}
+              </h3>
+              <p className="text-gray-600 mb-4">
+                {steps[currentStep - 1].description}
+              </p>
+              <div className="mt-4 p-4 bg-indigo-50 rounded-lg">
+                <p className="text-gray-700">
+                  Example: {exampleText?.split("undefined")[0] || exampleText}
+                  {isTyping && <span className="animate-pulse">|</span>}
+                </p>
+              </div>
+            </div>
+          )}
           {messages.map((message, index) => (
             <div
               key={index}
@@ -206,7 +267,13 @@ export default function Chat() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Type your message..."
+              placeholder={
+                messages.length === 0
+                  ? `Type your response about ${steps[
+                      currentStep - 1
+                    ].title.toLowerCase()}...`
+                  : "Type your message..."
+              }
               className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               disabled={isLoading}
             />
