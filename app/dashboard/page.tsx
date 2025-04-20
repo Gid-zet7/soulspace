@@ -15,6 +15,22 @@ import {
   Cell,
 } from "recharts";
 
+interface ChatSession {
+  id: string;
+  title: string;
+  summary: string;
+  currentStep: number;
+  triggers: { name: string; count: number }[];
+  copingStrategies: { name: string; count: number; definition: string }[];
+  createdAt: string;
+}
+
+interface CopingStrategy {
+  name: string;
+  count: number;
+  definition: string;
+}
+
 interface DashboardData {
   moodTrends: {
     date: string;
@@ -25,14 +41,8 @@ interface DashboardData {
     completed: number;
     inProgress: number;
   };
-  topTriggers: {
-    name: string;
-    count: number;
-  }[];
-  copingStrategies: {
-    name: string;
-    effectiveness: number;
-  }[];
+  chatSessions: ChatSession[];
+  copingStrategies: CopingStrategy[];
 }
 
 const COLORS = ["#4F46E5", "#10B981", "#F59E0B", "#EF4444"];
@@ -49,6 +59,7 @@ export default function Dashboard() {
       try {
         const response = await fetch("/api/dashboard");
         const data = await response.json();
+        console.log(data);
         setDashboardData(data);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
@@ -131,7 +142,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-xl font-semibold text-gray-700 mb-4">
             Mood Trends
@@ -156,47 +167,36 @@ export default function Dashboard() {
 
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-xl font-semibold text-gray-700 mb-4">
-            Common Triggers
-          </h3>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={dashboardData.topTriggers}
-                  dataKey="count"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                  label
-                >
-                  {dashboardData.topTriggers.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6 lg:col-span-2">
-          <h3 className="text-xl font-semibold text-gray-700 mb-4">
-            Coping Strategies Effectiveness
+            Coping Strategies
           </h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={dashboardData.copingStrategies}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
-                <YAxis domain={[0, 10]} />
-                <Tooltip />
+                <YAxis />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const strategy = payload[0].payload;
+                      return (
+                        <div className="bg-white p-4 border rounded-lg shadow-lg">
+                          <p className="font-semibold">{strategy.name}</p>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {strategy.definition}
+                          </p>
+                          <p className="text-sm text-gray-500 mt-1">
+                            Used {strategy.count} times
+                          </p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
                 <Line
                   type="monotone"
-                  dataKey="effectiveness"
+                  dataKey="count"
                   stroke="#10B981"
                   strokeWidth={2}
                 />
@@ -204,6 +204,84 @@ export default function Dashboard() {
             </ResponsiveContainer>
           </div>
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-8">
+        {dashboardData.chatSessions.map((session) => (
+          <div key={session.id} className="bg-white rounded-lg shadow p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold text-gray-700">
+                {session.title}
+              </h3>
+              <span className="text-sm text-gray-500">
+                {new Date(session.createdAt).toLocaleDateString()}
+              </span>
+            </div>
+            {session.summary && (
+              <p className="text-gray-600 mb-6 italic">"{session.summary}"</p>
+            )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 className="text-lg font-medium text-gray-700 mb-3">
+                  Identified Triggers
+                </h4>
+                <div className="space-y-2">
+                  <div className="h-96">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={session.triggers}
+                          dataKey="count"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={100}
+                          label
+                        >
+                          {session.triggers.map((entry, index) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={COLORS[index % COLORS.length]}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <h4 className="text-lg font-medium text-gray-700 mb-3">
+                  Coping Strategies
+                </h4>
+                <div className="space-y-2">
+                  {session.copingStrategies.length > 0 ? (
+                    session.copingStrategies.map((strategy, index) => (
+                      <div key={index} className="bg-green-50 p-3 rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-gray-700 font-medium">
+                            {strategy.name}
+                          </span>
+                          <span className="text-green-600 font-medium">
+                            {strategy.count} times
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          {strategy.definition}
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-gray-500 italic">
+                      No coping strategies discussed in this session
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

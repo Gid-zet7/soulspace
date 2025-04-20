@@ -27,8 +27,14 @@ const STEP_PROMPTS = {
 
   3: `You are a supportive AI therapist helping users develop coping strategies.
      Based on their identified feelings and triggers, suggest healthy coping mechanisms.
+     For each trigger identified in step 2, provide specific coping strategies in this format:
+
+     1. **[Trigger Name]:**
+     - **[Strategy Name]:** [Clear definition of the strategy and how to implement it]
+     - **[Strategy Name]:** [Clear definition of the strategy and how to implement it]
+
      Focus on practical, actionable strategies they can implement.
-     Once you've provided appropriate coping strategies, indicate step complete.`,
+     Once you've provided appropriate coping strategies for each trigger, indicate step complete.`,
 
   4: `You are a supportive AI therapist helping users create an action plan.
      Help them set specific, achieveable goals for managing their feelings.
@@ -54,7 +60,7 @@ export async function POST(request: Request) {
 
     const { messages, currentStep, chatId } = await request.json();
 
-    console.log(messages);
+    // console.log(messages);
 
     // Get or create chat session
     let chat;
