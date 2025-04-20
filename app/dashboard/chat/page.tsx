@@ -170,9 +170,9 @@ export default function Chat() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
+    <div className="flex flex-col h-[calc(100vh-4rem)] bg-[#0A0A0A]">
       {/* Steps Progress */}
-      <div className="bg-white shadow-sm p-4">
+      <div className="bg-[#1A0505]/40 backdrop-blur-lg border-b border-red-900/20 p-4">
         <div className="max-w-4xl mx-auto">
           <div className="flex justify-between">
             {steps.map((step) => (
@@ -180,19 +180,19 @@ export default function Chat() {
                 key={step.number}
                 className={`flex flex-col items-center ${
                   step.number === currentStep
-                    ? "text-indigo-600"
+                    ? "text-red-500"
                     : step.completed
-                    ? "text-green-600"
-                    : "text-gray-400"
+                    ? "text-red-600"
+                    : "text-gray-500"
                 }`}
               >
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
                     step.number === currentStep
-                      ? "border-indigo-600 bg-indigo-50"
+                      ? "border-red-500 bg-[#1A0505]"
                       : step.completed
-                      ? "border-green-600 bg-green-50"
-                      : "border-gray-300"
+                      ? "border-red-600 bg-[#1A0505]"
+                      : "border-gray-700"
                   }`}
                 >
                   {step.completed ? "✓" : step.number}
@@ -205,18 +205,18 @@ export default function Chat() {
       </div>
 
       {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto p-4 bg-gradient-to-b from-[#1A0505] via-[#0A0A0A] to-[#0A0A0A]">
         <div className="max-w-4xl mx-auto space-y-4">
           {messages.length === 0 && (
             <div className="text-center py-8">
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
+              <h3 className="text-lg font-medium text-white mb-2">
                 {steps[currentStep - 1].title}
               </h3>
-              <p className="text-gray-600 mb-4">
+              <p className="text-gray-400 mb-4">
                 {steps[currentStep - 1].description}
               </p>
-              <div className="mt-4 p-4 bg-indigo-50 rounded-lg">
-                <p className="text-gray-700">
+              <div className="mt-4 p-4 bg-[#1A0505]/40 backdrop-blur-lg rounded-lg border border-red-900/20">
+                <p className="text-gray-300">
                   Example: {exampleText?.split("undefined")[0] || exampleText}
                   {isTyping && <span className="animate-pulse">|</span>}
                 </p>
@@ -233,8 +233,8 @@ export default function Chat() {
               <div
                 className={`max-w-[80%] rounded-lg p-4 ${
                   message.role === "user"
-                    ? "bg-indigo-600 text-white"
-                    : "bg-gray-100 text-gray-900"
+                    ? "bg-red-600 text-white"
+                    : "bg-[#1A0505]/40 backdrop-blur-lg border border-red-900/20 text-gray-300"
                 }`}
               >
                 <p className="text-sm">{message.content}</p>
@@ -246,11 +246,11 @@ export default function Chat() {
           ))}
           {isLoading && (
             <div className="flex justify-start">
-              <div className="bg-gray-100 rounded-lg p-4">
+              <div className="bg-[#1A0505]/40 backdrop-blur-lg rounded-lg p-4 border border-red-900/20">
                 <div className="flex space-x-2">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-100"></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-200"></div>
+                  <div className="w-2 h-2 bg-red-500 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-red-500 rounded-full animate-bounce delay-100"></div>
+                  <div className="w-2 h-2 bg-red-500 rounded-full animate-bounce delay-200"></div>
                 </div>
               </div>
             </div>
@@ -260,7 +260,7 @@ export default function Chat() {
       </div>
 
       {/* Input Form */}
-      <div className="bg-white border-t p-4">
+      <div className="bg-[#1A0505]/40 backdrop-blur-lg border-t border-red-900/20 p-4">
         <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
           <div className="flex gap-2">
             <input
@@ -274,13 +274,13 @@ export default function Chat() {
                     ].title.toLowerCase()}...`
                   : "Type your message..."
               }
-              className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="flex-1 rounded-lg bg-[#0A0A0A] border border-red-900/20 px-4 py-2 text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500"
               disabled={isLoading}
             />
             <button
               type="submit"
               disabled={isLoading}
-              className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+              className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 transition-colors duration-200"
             >
               Send
             </button>
